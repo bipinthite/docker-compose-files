@@ -1,0 +1,48 @@
+---
+
+    version: "3.3"
+
+    services:
+
+      mongodb:
+        image: mongo
+        ports:
+          - 27017:27017
+        networks:
+          back-tier:
+            aliases:
+              - mongodb
+        volumes:
+          - ./initdb:/docker-entrypoint-initdb.d/
+          - mongodata:/data/db
+        configs:
+        # to avoid changes to the original mongo image, we import the healthcheck script using configs
+          - mongo-healthcheck
+        # it simply checks that the client can connect to mongo. No test is run w.r.t. the cluster.
+        healthcheck:
+            test: ["CMD", "bash", "/mongo-healthcheck"]
+            interval: 30s
+            timeout: 10s
+            retries: 6
+        deploy:
+          replicas: 1
+          resources:
+            limits:
+              cpus: "0.1"
+              memory: 500m
+          restart_policy:
+            condition: on-failure
+            delay: 10s
+
+    configs:
+      # to avoid changes to the original mongo image, we import the healthcheck script using configs
+      mongo-healthcheck:
+        file: mongo-healthcheck
+
+    networks:
+      back-tier:
+        external: true
+
+    volumes:
+      mongodata:
+        external: true
