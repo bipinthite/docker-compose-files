@@ -26,3 +26,7 @@ If don't have already this network created, use below command to create it.
 ```
 docker network create back-tier --driver overlay
 ```
+
+## Bootstrap data:
+
+When a container is started for the first time it will execute files with extensions `.sh` and `.js` that are found in `initdb` directory. Files will be executed in alphabetical order. `.js` files will be executed by mongo using the database specified by the `MONGO_INITDB_DATABASE` variable, if it is present, or `test` otherwise. You may also switch databases within the `.js` script.
