@@ -1,0 +1,59 @@
+---
+
+    version: "3.3"
+
+    services:
+
+      zookeeper:
+        image: wurstmeister/zookeeper
+        ports:
+          - 2181:2181
+        networks:
+          back-tier:
+            aliases:
+              - zookeeper
+        deploy:
+          replicas: 1
+          resources:
+            limits:
+              cpus: "0.1"
+              memory: 300m
+          restart_policy:
+            condition: on-failure
+            delay: 5s
+
+      kafka:
+        image: wurstmeister/kafka
+        command: [start-kafka.sh]
+        depends_on:
+          - zookeeper
+        ports:
+          - 9092:9092
+        networks:
+          back-tier:
+            aliases:
+              - kafka
+        environment:
+          # HOSTNAME_COMMAND: "docker info | grep ^Name: | cut -d' ' -f 2"
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+          KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://localhost:9094
+          KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9094
+          KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+          # KAFKA_ADVERTISED_HOST_NAME: localhost # docker-machine ip
+          # KAFKA_ADVERTISED_PORT: 9092
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+        deploy:
+          replicas: 1
+          resources:
+            limits:
+              cpus: "0.5"
+              memory: 500m
+          restart_policy:
+            condition: on-failure
+            delay: 5s
+
+    networks:
+      back-tier:
+        external: true
