@@ -1,0 +1,102 @@
+---
+
+version: "3.3"
+
+services:
+
+  # MongoDB: https://hub.docker.com/_/mongo/
+  mongodb:
+    image: mongo:3
+    networks:
+      back-tier:
+        aliases:
+          - mongodb
+
+  # Elasticsearch: https://www.elastic.co/guide/en/elasticsearch/reference/6.x/docker.html
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.8.10
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      back-tier:
+        aliases:
+          - elasticsearch
+    environment:
+      - bootstrap.memory_lock=true
+      - TZ=Asia/Kolkata
+      - http.host=0.0.0.0
+      - transport.host=localhost
+      - cluster.name=graylog
+      - network.host=0.0.0.0
+      # Disable X-Pack security: https://www.elastic.co/guide/en/elasticsearch/reference/5.6/security-settings.html#general-security-settings
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    configs:
+    # to avoid changes to the original elasticsearch image, we import the healthcheck script using configs
+      - elasticsearch-healthcheck
+    healthcheck:
+        test: ["CMD", "bash", "/elasticsearch-healthcheck"]
+        interval: 1m
+        timeout: 10s
+        retries: 5
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 500m
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+
+  # Graylog: https://hub.docker.com/r/graylog/graylog/
+  graylog:
+    image: graylog/graylog:3.3
+    volumes:
+      - graylog_journal:/usr/share/graylog/data/journal
+      - ./config:/usr/share/graylog/data/config
+    networks:
+      back-tier:
+        aliases:
+          - graylog
+    environment:
+      - TZ=Asia/Kolkata
+      # CHANGE ME!
+      - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
+      # Password: admin
+      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_WEB_ENDPOINT_URI=http://127.0.0.1:9000/api
+      - GRAYLOG_REST_TRANSPORT_URI=http://127.0.0.1:9000/api/
+      - GRAYLOG_ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=elasticsearch
+    depends_on:
+      - mongodb
+      - elasticsearch
+    ports:
+      # Graylog web interface and REST API
+      - 9000:9000
+      # Syslog TCP
+      - 514:514
+      # Syslog UDP
+      - 514:514/udp
+      # GELF TCP
+      - 12201:12201
+      # GELF UDP
+      - 12201:12201/udp
+
+# Configurations
+configs:
+  elasticsearch-healthcheck:
+    file: elasticsearch-healthcheck
+
+# Networks
+networks:
+  back-tier:
+    external: true
+
+# Volumes for persisting data, see https://docs.docker.com/engine/admin/volumes/volumes/
+volumes:
+  esdata:
+    external: true
+  graylog_journal:
+    external: true
