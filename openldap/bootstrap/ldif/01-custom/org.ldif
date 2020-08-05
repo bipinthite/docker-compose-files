@@ -1,0 +1,14 @@
+dn: o=sales,dc=example,dc=org
+changetype: add
+o: sales
+objectClass: organization
+
+dn: o=marketing,dc=example,dc=org
+changetype: add
+o: marketing
+objectClass: organization
+
+dn: o=engineering,dc=example,dc=org
+changetype: add
+o: engineering
+objectClass: organization

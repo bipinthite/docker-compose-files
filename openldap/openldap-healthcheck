@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -eo pipefail
+
+host="$(hostname --ip-address || echo '127.0.0.1')"
+tester="version 1"
+
+if health="$(ldapsearch -xLL -h "$host")"; then
+	health="$(echo "$health" | sed -r 's/^[[:space:]]+|[[:space:]]+$//g')" # trim whitespace (otherwise we'll have "green ")
+	if [[ $string =~ $tester ]]; then
+      exit 0
+    fi
+fi
+
+exit 1

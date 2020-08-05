@@ -1,0 +1,74 @@
+---
+
+version: "3.3"
+
+services:
+
+  openldap:
+    image: osixia/openldap
+    ports:
+      - 389:389
+    networks:
+      back-tier:
+        aliases:
+          - openldap
+    volumes:
+      - ldapdata:/var/lib/ldap
+      - slapdconfig:/etc/ldap/slapd.d
+      - ./config/ldap/environment:/container/environment/01-custom:ro
+      - ./config/ldap/bootstrap/ldif/01-custom:/container/service/slapd/assets/config/bootstrap/ldif/custom
+    # configs:
+    # # to avoid changes to the original image, we import the healthcheck script using configs
+    #   - openldap-healthcheck
+    # healthcheck:
+    #   test: ["CMD", "bash", "/openldap-healthcheck"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 300m
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+
+  phpldapadmin:
+    image: osixia/phpldapadmin
+    ports:
+      - 6080:80
+    depends_on:
+      - openldap
+    networks:
+      - front-tier
+      - back-tier
+    volumes:
+      - ./config/phpldapadmin/environment/my-env.startup.yaml:/container/environment/01-custom/env.yaml:ro
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 200m
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+
+# configs:
+#   # to avoid changes to the original image, we import the healthcheck script using configs
+#   openldap-healthcheck:
+#     file: openldap-healthcheck
+
+networks:
+  front-tier:
+    external: true
+  back-tier:
+    external: true
+
+volumes:
+  ldapdata:
+    external: true
+  slapdconfig:
+    external: true
