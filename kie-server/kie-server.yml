@@ -1,0 +1,34 @@
+---
+
+version: "3.3"
+
+services:
+
+  # Kie Server: https://hub.docker.com/r/jboss/kie-server
+  kie-server:
+    image: jboss/kie-server:7.15.0.Final
+    environment:
+      - JAVA_OPTS=-Xms256m -Xmx1024m -Djava.net.preferIPv4Stack=true -Dfile.encoding=UTF-8
+    networks:
+      back-tier:
+        aliases:
+          - kie-server
+    ports:
+      # Kie Server End Point
+      - 6060:8080
+      # Wildfly Admin console
+      - 9990:9990
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 768m
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+
+# Networks
+networks:
+  back-tier:
+    external: true
