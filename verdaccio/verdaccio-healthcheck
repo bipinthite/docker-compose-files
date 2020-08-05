@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -eo pipefail
+
+host="$(hostname -i || echo '127.0.0.1')"
+
+if status="$(wget --server-response http://$host:4873/ 2>&1 | awk '/^  HTTP/{print $2}')" && [ "$status" = '200' ]; then
+	exit 0
+fi
+
+exit 1
