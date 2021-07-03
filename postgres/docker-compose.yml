@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+
+  postgres:
+    image: "postgres:${IMAGE_TAG}"
+    ports:
+      - target: 5432
+        published: ${PUBLISHED_PORT}
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: volume
+        source: postgresdata
+        target: /var/lib/postgresql/data
+      - type: bind
+        source: ./initdb
+        target: /docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    networks:
+      back-tier:
+        aliases:
+          - postgres
+    expose:
+      - 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - "node.role=manager"
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 500M
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+networks:
+  back-tier:
+    external: true
+
+volumes:
+  postgresdata:
+    external: true
