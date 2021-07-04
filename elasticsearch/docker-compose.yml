@@ -1,0 +1,56 @@
+# docker network create --attachable back-tier
+# docker volume create esdata
+
+version: "3.9"
+
+services:
+
+  elasticsearch:
+    image: "docker.elastic.co/elasticsearch/elasticsearch:${IMAGE_TAG}"
+    ports:
+      - target: 9200
+        published: ${PUBLISHED_PORT}
+        protocol: tcp
+        mode: host
+      - target: 9300
+        published: ${PUBLISHED_ADMIN_PORT}
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: volume
+        source: esdata
+        target: /usr/share/elasticsearch/data
+    environment:
+      - "discovery.type=single-node"
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    networks:
+      back-tier:
+        aliases:
+          - elasticsearch
+    expose:
+      - 9200
+      - 9300
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - "node.role=manager"
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 600M
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+networks:
+  back-tier:
+    external: true
+
+volumes:
+  esdata:
+    external: true
