@@ -1,0 +1,57 @@
+# docker network create --attachable back-tier
+# docker volume create mongodbdata
+
+version: "3.9"
+
+services:
+
+  mongodb:
+    image: "mongo:${IMAGE_TAG}"
+    ports:
+      - target: 27017
+        published: ${PUBLISHED_PORT}
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: volume
+        source: mongodbdata
+        target: /data/db
+      - type: bind
+        source: ./initdb
+        target: /docker-entrypoint-initdb.d
+    environment:
+      - MONGO_INITDB_DATABASE=${INITDB_NAME}
+      - MONGO_INITDB_ROOT_USERNAME=${INITDB_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${INITDB_PASSWORD}
+    networks:
+      back-tier:
+        aliases:
+          - mongodb
+    expose:
+      - 27017
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - "node.role=manager"
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 500M
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+networks:
+  back-tier:
+    external: true
+
+volumes:
+  mongodbdata:
+    external: true
