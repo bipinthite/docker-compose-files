@@ -1,0 +1,40 @@
+# docker network create --attachable back-tier
+
+version: "3.9"
+
+services:
+
+  redis:
+    image: "redis:${IMAGE_TAG}"
+    ports:
+      - target: 6379
+        published: ${PUBLISHED_PORT}
+        protocol: tcp
+        mode: host
+    networks:
+      back-tier:
+        aliases:
+          - redis
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - "node.role=manager"
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 100M
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+networks:
+  back-tier:
+    external: true
